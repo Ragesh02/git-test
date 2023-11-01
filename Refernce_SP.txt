@@ -1,0 +1,72 @@
+-- FUNCTION: public.sp_scheme_fund_allocation(character varying, integer, integer, timestamp without time zone, character varying, integer, numeric, integer, text, text, integer, integer)
+
+-- DROP FUNCTION public.sp_scheme_fund_allocation(character varying, integer, integer, timestamp without time zone, character varying, integer, numeric, integer, text, text, integer, integer);
+
+CREATE OR REPLACE FUNCTION public.sp_scheme_fund_allocation(
+	sp_fin_year character varying,
+	sp_scheme integer,
+	sp_fund_allocation_level integer,
+	sp_allocation_date timestamp without time zone,
+	sp_proceeding_no character varying,
+	sp_installment_no integer,
+	sp_amount numeric,
+	sp_transaction_type integer,
+	sp_username text,
+	sp_ipaddress text,
+	sp_edit_id integer,
+	sp_del_id integer)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+
+
+DECLARE
+
+record_scheme_fund_allocation RECORD;
+
+BEGIN
+
+		BEGIN
+			IF sp_edit_id = 0 AND sp_del_id = 0 THEN
+				
+			INSERT INTO public.t_scheme_fund_allocation(fin_year,scheme_id,fund_allocation_level_id,allocation_date,proceeding_no,installment_no,amount,transaction_type,ins_username,ins_ipaddress,ins_date)
+			VALUES(sp_fin_year,sp_scheme,sp_fund_allocation_level,sp_allocation_date,sp_proceeding_no,sp_installment_no,sp_amount,sp_transaction_type,sp_username,sp_ipaddress,now());
+					
+				RETURN;
+			END IF;
+			EXCEPTION WHEN unique_violation THEN
+		END;
+		
+		BEGIN
+			IF sp_edit_id > 0 THEN
+					
+			UPDATE public.t_scheme_fund_allocation SET fin_year=sp_fin_year, scheme_id=sp_scheme,	fund_allocation_level_id=sp_fund_allocation_level,allocation_date=sp_allocation_date,				   proceeding_no=sp_proceeding_no,installment_no=sp_installment_no,	amount=sp_amount,transaction_type=sp_transaction_type,upd_date=now(),upd_username=sp_username,upd_ipaddress=sp_ipaddress where fund_allocation_id=sp_edit_id;
+				
+				
+			ELSE
+				IF found THEN
+					RETURN;
+				END IF;
+			END IF;
+		END;
+
+		BEGIN
+			IF sp_del_id > 0 THEN
+				
+			UPDATE public.t_scheme_fund_allocation SET del_flag='Y',del_username=sp_username,del_ipaddress=sp_ipaddress,del_date=now() where fund_allocation_id=sp_del_id;
+				
+				
+			ELSE
+				IF found THEN
+					RETURN;
+				END IF;
+			END IF;
+		END;
+
+END;
+$BODY$;
+
+ALTER FUNCTION public.sp_scheme_fund_allocation(character varying, integer, integer, timestamp without time zone, character varying, integer, numeric, integer, text, text, integer, integer)
+    OWNER TO postgres;
